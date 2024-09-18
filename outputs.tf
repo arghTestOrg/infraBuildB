@@ -50,12 +50,17 @@ output "mongodb_connection_endpoint" {
 # EKS Cluster Name
 output "eks_cluster_name" {
   description = "The name of the EKS cluster"
-  value       = module.eks.cluster_id
+  value       = module.eks.cluster_name
 }
 
 # EKS Cluster Endpoint
 output "eks_cluster_endpoint" {
   description = "The endpoint of the EKS cluster"
   value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_status" {
+  description = "Status of the EKS cluster"
+  value = module.eks.cluster_status
 }
 

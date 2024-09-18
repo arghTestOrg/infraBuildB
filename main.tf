@@ -31,6 +31,7 @@ resource "aws_subnet" "private_subnets" {
   cidr_block              = "10.1.${10 + count.index}.0/24"
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
+  #private_dns_hostname_type_on_launch = aws_instance.ip-name
   tags = {
     Name = "PrivateSubnet_${10 + count.index}"
   }
@@ -80,6 +81,12 @@ resource "aws_route_table_association" "public_rt_association" {
 
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.prod_vpc.id
+
+ route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.nat_gw.id
+  }
+
 
   tags = {
     Name = "private_rt"
@@ -204,7 +211,9 @@ resource "aws_iam_policy" "ec2_policy" {
         "s3:PutObject",
         "s3:PutObjectAcl",
         "s3:GetObject",
-        "s3:ListBucket"
+        "s3:ListBucket",
+        "s3:ListAllBuckets",
+        "s3:GetBucketObjectLockConfiguration"
       ],
       "Effect": "Allow",
       "Resource": [
@@ -348,13 +357,14 @@ resource "aws_iam_policy_attachment" "config_role_attachment" {
 # EKS cluster module setup
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
+  version         = "20.24.1"
   cluster_name    = var.aws_eks_cluster_name
-  cluster_version = var.aws_eks_cluster_ver
   subnet_ids      = aws_subnet.private_subnets[*].id
   vpc_id          = aws_vpc.prod_vpc.id
 
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
+  cluster_endpoint_private_access          = true  
 
   eks_managed_node_groups = {
     eks_nodes = {
@@ -363,7 +373,21 @@ module "eks" {
       min_capacity     = var.aws_eks_min_capacity
       instance_type    = var.aws_eks_node_instance_type
     }
+   /* node_security_group_additional_rules = {
+      ingress = {
+        from_port       = 27017
+        to_port         = 27017
+        protocol        = "tcp"
+        security_groups = [aws_security_group.db_sg.id]
+      }
+    }*/
   }
+  #Need this dependency as the nodes need connectivity
+  depends_on = [ 
+    aws_eip.nat_eip,
+    aws_nat_gateway.nat_gw,
+    aws_route_table.private_rt
+   ]
 
   tags = {
     Environment = "production"
@@ -371,8 +395,8 @@ module "eks" {
   }
 }
 
-# Security Group for EKS to communicate with MongoDB
-resource "aws_security_group" "eks_security_group" {
+/* # Security Group for EKS to communicate with MongoDB
+resource "aws_security_group" "eks_sg" {
   name   = "eks_security_group"
   vpc_id = aws_vpc.prod_vpc.id
 
@@ -393,6 +417,16 @@ resource "aws_security_group" "eks_security_group" {
   tags = {
     Name = "eks_security_group"
   }
+} */
+
+resource "aws_nat_gateway" "nat_gw" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id = aws_subnet.public_subnets[0].id
+   
+}
+
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
 }
 
 # IAM Roles and Policies for EKS
@@ -424,11 +458,11 @@ resource "aws_iam_role_policy_attachment" "eks_service_role_policy_attachment" {
 # Null resource to fetch MongoDB credentials and create Kubernetes secret
 resource "null_resource" "create_mongo_k8s_secret" {
   depends_on = [module.eks]
-
+  
   provisioner "local-exec" {
     command = <<EOT
-      MONGO_USERNAME=$(aws secretsmanager get-secret-value --secret-id aws_secretsmanager_secret.mongodb_app_secret.id --query SecretString --output text | jq -r .username)
-      MONGO_PASSWORD=$(aws secretsmanager get-secret-value --secret-id aws_secretsmanager_secret.mongodb_app_secret.id --query SecretString --output text | jq -r .password)
+      MONGO_USERNAME=$(aws secretsmanager get-secret-value --secret-id mongodb_app_credentials --query SecretString --output text | jq -r .username)
+      MONGO_PASSWORD=$(aws secretsmanager get-secret-value --secret-id mongodb_app_credentials --query SecretString --output text | jq -r .password)
 
       kubectl create secret generic mongo-secret --from-literal=username=$MONGO_USERNAME --from-literal=password=$MONGO_PASSWORD --namespace default
     EOT

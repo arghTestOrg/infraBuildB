@@ -31,10 +31,10 @@ jobs:
       run: terraform init -lock=false
 
     - name: Terraform Plan
-      run: terraform plan -lock=false -var='exclude_ec2_instance=true'
+      run: terraform plan -lock=false -var='exclude_ec2_instance=false'
 
     - name: Terraform Apply
-      run: terraform apply -auto-approve -lock=false -var='exclude_ec2_instance=true'
+      run: terraform apply -auto-approve -lock=false -var='exclude_ec2_instance=false'
 
     - name: Retrieve MongoDB Endpoint
       id: get_mongodb_endpoint

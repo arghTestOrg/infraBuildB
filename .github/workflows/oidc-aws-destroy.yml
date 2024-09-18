@@ -32,5 +32,5 @@ jobs:
     #  run: terraform plan -destroy -lock=false
       
     - name: Terraform Destroy
-      run: terraform destroy -auto-approve -lock=false -var='exclude_ec2_instance=true'
+      run: terraform destroy -auto-approve -lock=false -var='exclude_ec2_instance=false'
       continue-on-error: true
