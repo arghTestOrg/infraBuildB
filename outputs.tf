@@ -13,7 +13,7 @@ output "public_subnet_id" {
 # Private Subnet ID
 output "private_subnet_id" {
   description = "The ID of the private subnet"
-  value       = aws_subnet.private_subnets[*].subnet_id
+  value       = aws_subnet.private_subnets[*].id
 }
 
 # EC2 Instance ID
