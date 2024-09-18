@@ -1,0 +1,74 @@
+
+name: Deploy to AWS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials using OIDC
+      uses: aws-actions/configure-aws-credentials@v4  
+      with:
+        role-to-assume: arn:aws:iam::209479268294:role/GithubOIDCRole
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.9.5
+
+    - name: Terraform Init
+      run: terraform init -lock=false
+
+    - name: Terraform Plan
+      run: terraform plan -lock=false -var='exclude_ec2_instance=true'
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -lock=false -var='exclude_ec2_instance=true'
+
+    - name: Retrieve MongoDB Endpoint
+      id: get_mongodb_endpoint
+      run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_instance_endpoint)" >> $GITHUB_ENV
+
+    - name: Install AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install awscli -y
+        aws --version
+
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        kubectl version --client
+
+    - name: Update kubeconfig for EKS Cluster
+      run: |
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ steps.terraform.outputs.eks_cluster_name }}
+
+    - name: Create mongodb-service.yaml
+      run: |
+        echo "apiVersion: v1
+        kind: Service
+        metadata:
+          name: mongodb
+          namespace: default
+        spec:
+          type: ExternalName
+          externalName: ${{ env.MONGODB_ENDPOINT }}
+          ports:
+            - port: 27017
+              targetPort: 27017" > mongodb-service.yaml
+
+    - name: Apply MongoDB Service to EKS Cluster
+      run: kubectl apply -f mongodb-service.yaml
