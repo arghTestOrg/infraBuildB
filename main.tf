@@ -387,7 +387,7 @@ resource "aws_security_group" "eks_security_group" {
     from_port       = 27017
     to_port         = 27017
     protocol        = "tcp"
-    security_groups = [aws_security_group.db_security_group.id]
+    security_groups = aws_security_group.db_sg.id
   }
 
   tags = {
