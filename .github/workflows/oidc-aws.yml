@@ -38,7 +38,7 @@ jobs:
 
     - name: Retrieve MongoDB Endpoint
       id: get_mongodb_endpoint
-      run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_instance_endpoint)" >> $GITHUB_ENV
+      run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_connection_endpoint)" >> $GITHUB_ENV
       
     - name: Install AWS CLI
       run: |
@@ -53,7 +53,7 @@ jobs:
         kubectl version --client
 
     - name: Retrieve Cluster Endpoint
-      run: echo "CLUSTER_NAME_ENDPOINT=$(terraform output -raw eks_cluster_name)" >> $GITHUB_ENV
+      run: echo "CLUSTER_NAME=$(terraform output -raw eks_cluster_name)" >> $GITHUB_ENV
 
     -  name: Update kubeconfig for EKS Cluster
        run: |
