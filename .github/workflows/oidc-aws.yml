@@ -36,9 +36,12 @@ jobs:
     - name: Terraform Apply
       run: terraform apply -auto-approve -lock=false -var='exclude_ec2_instance=false'
 
+    - name: setup db uri prefix
+      run: echo uriprefix="mongodb://"
+    
     - name: Retrieve MongoDB Endpoint
       id: get_mongodb_endpoint
-      run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_connection_endpoint)" >> $GITHUB_ENV
+      run: echo "MONGODB_ENDPOINT=$uriprefix$(terraform output -raw ec2_private_ip)" >> $GITHUB_ENV
       
     - name: Install AWS CLI
       run: |
@@ -68,7 +71,7 @@ jobs:
           namespace: default
         spec:
           type: ExternalName
-          externalName: ${{ env.MONGODB_ENDPOINT }}
+          externalName: "mongodb://" ${{ env.MONGODB_ENDPOINT }}
           ports:
             - port: 27017
               targetPort: 27017" > mongodb-service.yaml

@@ -28,6 +28,11 @@ output "ec2_public_ip" {
   value       = aws_instance.db_instance[*].public_ip
 }
 
+output "ec2_private_ip" {
+  description = "The public IP address of the EC2 instance"
+  value       = aws_instance.db_instance[*].private_ip
+}
+
 # S3 TF State Bucket Name and ID
 output "tf_state_bucket_name" {
   description = "The name and ID of the S3 bucket for Terraform state"
