@@ -48,7 +48,7 @@ output "backup_bucket_name" {
 # MongoDB Connection String (Public DNS)
 output "mongodb_connection_endpoint" {
   description = "The connection string for MongoDB (EC2 Private DNS)"
-  value       = aws_instance.db_instance[*].private_dns
+  value       = aws_instance.db_instance[0].private_dns
 }
 
 
