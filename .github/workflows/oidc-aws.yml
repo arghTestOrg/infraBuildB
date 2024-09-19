@@ -41,7 +41,7 @@ jobs:
     
     - name: Retrieve MongoDB Endpoint
       id: get_mongodb_endpoint
-      run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_connection_point)" >> $GITHUB_ENV
+      run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_connection_endpoint)" >> $GITHUB_ENV
       
     - name: Install AWS CLI
       run: |

@@ -29,7 +29,7 @@ output "ec2_public_ip" {
 }
 
 output "ec2_private_ip" {
-  description = "The public IP address of the EC2 instance"
+  description = "The private IP address of the EC2 instance"
   value       = aws_instance.db_instance[0].private_ip #added the zero to fix issues later with using outoyt in mongdb-service yml
 }
 
