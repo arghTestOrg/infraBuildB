@@ -61,6 +61,6 @@ output "eks_cluster_endpoint" {
 
 output "eks_cluster_status" {
   description = "Status of the EKS cluster"
-  value = module.eks.cluster_status
+  value       = module.eks.cluster_status
 }
 
