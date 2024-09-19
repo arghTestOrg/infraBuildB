@@ -39,7 +39,7 @@ jobs:
     - name: Retrieve MongoDB Endpoint
       id: get_mongodb_endpoint
       run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_instance_endpoint)" >> $GITHUB_ENV
-
+      
     - name: Install AWS CLI
       run: |
         sudo apt-get update
@@ -52,9 +52,12 @@ jobs:
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
         kubectl version --client
 
-    - name: Update kubeconfig for EKS Cluster
-      run: |
-        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ steps.terraform.outputs.eks_cluster_name }}
+    - name: Retrieve Cluster Endpoint
+      run: echo "CLUSTER_NAME_ENDPOINT=$(terraform output -raw eks_cluster_name)" >> $GITHUB_ENV
+
+    -  name: Update kubeconfig for EKS Cluster
+       run: |
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ env.CLUSTER_NAME }}
 
     - name: Create mongodb-service.yaml
       run: |
