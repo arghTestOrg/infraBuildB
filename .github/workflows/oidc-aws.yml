@@ -19,7 +19,7 @@ jobs:
     - name: Configure AWS Credentials using OIDC
       uses: aws-actions/configure-aws-credentials@v4  
       with:
-        role-to-assume: arn:aws:iam::209479268294:role/GithubOIDCRole
+        role-to-assume: ${{ secrets.AWS_ROLE_ASSUMED }}
         aws-region: ${{ secrets.AWS_REGION }}
 
     - name: Setup Terraform
@@ -36,9 +36,6 @@ jobs:
     - name: Terraform Apply
       run: terraform apply -auto-approve -lock=false -var='exclude_ec2_instance=false'
 
-    - name: setup db uri prefix
-      run: echo uriprefix="mongodb://"
-    
     - name: Retrieve MongoDB Endpoint
       id: get_mongodb_endpoint
       run: echo "MONGODB_ENDPOINT=$(terraform output -raw mongodb_connection_endpoint)" >> $GITHUB_ENV
@@ -57,6 +54,9 @@ jobs:
 
     - name: Retrieve Cluster Endpoint
       run: echo "CLUSTER_NAME=$(terraform output -raw eks_cluster_name)" >> $GITHUB_ENV
+    
+    - name: Retrieve Cluster Name
+      run: echo "CLUSTER_ENDPOINT=$(terraform output -raw eks_cluster_endpoint)" >> $GITHUB_ENV
 
     -  name: Update kubeconfig for EKS Cluster
        run: |
@@ -78,3 +78,9 @@ jobs:
 
     - name: Apply MongoDB Service to EKS Cluster
       run: kubectl apply -f mongodb-service.yaml
+
+    - name: Set GitHub Organization Secrets
+      run: |
+        gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+        gh secret set CLUSTER_NAME --body "${{ env.CLUSTER_NAME }}" --org argTestOrg
+        gh secret set CLUSTER_ENDPOINT --body "${{ env.CLUSTER_ENDPOINT }}" --org argTestOrg
