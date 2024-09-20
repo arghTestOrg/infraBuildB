@@ -79,8 +79,13 @@ jobs:
     - name: Apply MongoDB Service to EKS Cluster
       run: kubectl apply -f mongodb-service.yaml
 
+    # Authenticate GitHub CLI using the Personal Access Token (PAT)
+    - name: Authenticate GitHub CLI
+      run: |
+        echo "${{ secrets.PAT_TOKEN }}" | gh auth login --with-token
+      
+    # Setting secrets for App deploy
     - name: Set GitHub Organization Secrets
       run: |
-        gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
         gh secret set CLUSTER_NAME --body "${{ env.CLUSTER_NAME }}" --org argTestOrg
         gh secret set CLUSTER_ENDPOINT --body "${{ env.CLUSTER_ENDPOINT }}" --org argTestOrg
