@@ -354,40 +354,6 @@ resource "aws_iam_policy_attachment" "config_role_attachment" {
 */
 
 
-# EKS cluster module setup
-module "eks" {
-  source       = "terraform-aws-modules/eks/aws"
-  version      = "20.24.1"
-  cluster_name = var.aws_eks_cluster_name
-  subnet_ids   = aws_subnet.private_subnets[*].id
-  vpc_id       = aws_vpc.prod_vpc.id
-
-  enable_cluster_creator_admin_permissions = true
-  cluster_endpoint_public_access           = true
-  cluster_endpoint_private_access          = true
-
-  eks_managed_node_groups = {
-    eks_nodes = {
-      desired_capacity = var.aws_eks_desired_capacity
-      max_capacity     = var.aws_eks_cluster_max_capacity
-      min_capacity     = var.aws_eks_min_capacity
-      instance_type    = var.aws_eks_node_instance_type
-    }
-  }
-
-  #Need this dependency as the nodes need connectivity
-  depends_on = [
-    aws_eip.nat_eip,
-    aws_nat_gateway.nat_gw,
-    aws_route_table.private_rt
-  ]
-
-  tags = {
-    Environment = "production"
-    Terraform   = "true"
-  }
-}
-
 /* # Security Group for EKS to communicate with MongoDB
 resource "aws_security_group" "eks_sg" {
   name   = "eks_security_group"
@@ -422,6 +388,64 @@ resource "aws_eip" "nat_eip" {
   domain = "vpc"
 }
 
+# Null resource to fetch MongoDB credentials and create Kubernetes secret
+resource "null_resource" "create_mongo_k8s_secret" {
+  depends_on = [module.eks]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      # Configure kubectl to connect to the EKS cluster
+      aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}
+
+      # Fetch MongoDB credentials from AWS Secrets Manager
+      MONGO_USERNAME=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.mongodb_app_secret.id} --query SecretString --output text | jq -r .username)
+      MONGO_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.mongodb_app_secret.id} --query SecretString --output text | jq -r .password)
+
+      # Create Kubernetes secret
+      kubectl create secret generic mongo-secret --from-literal=username=$MONGO_USERNAME --from-literal=password=$MONGO_PASSWORD --namespace default
+    EOT
+
+    environment = {
+      AWS_REGION = var.aws_region
+    }
+  }
+}
+# ***************************EKS CONFIG******************************
+# EKS cluster module setup
+module "eks" {
+  source       = "terraform-aws-modules/eks/aws"
+  version      = "20.24.1"
+  cluster_name = var.aws_eks_cluster_name
+  subnet_ids   = aws_subnet.private_subnets[*].id
+  vpc_id       = aws_vpc.prod_vpc.id
+
+  enable_cluster_creator_admin_permissions = true
+  cluster_endpoint_public_access           = true
+  cluster_endpoint_private_access          = true
+
+  eks_managed_node_groups = {
+    eks_nodes = {
+      desired_capacity = var.aws_eks_desired_capacity
+      max_capacity     = var.aws_eks_cluster_max_capacity
+      min_capacity     = var.aws_eks_min_capacity
+      instance_type    = var.aws_eks_node_instance_type
+    }
+  }
+
+  #Need this dependency as the nodes need connectivity
+  depends_on = [
+    aws_eip.nat_eip,
+    aws_nat_gateway.nat_gw,
+    aws_route_table.private_rt
+  ]
+
+  tags = {
+    Environment = "production"
+    Terraform   = "true"
+  }
+}
+
+
 # IAM Roles and Policies for EKS
 resource "aws_iam_role" "eks_cluster_role" {
   name = "eks-cluster-role"
@@ -448,25 +472,57 @@ resource "aws_iam_role_policy_attachment" "eks_service_role_policy_attachment" {
   role       = aws_iam_role.eks_cluster_role.name
 }
 
-# Null resource to fetch MongoDB credentials and create Kubernetes secret
-resource "null_resource" "create_mongo_k8s_secret" {
-  depends_on = [module.eks]
-
-  provisioner "local-exec" {
-    command = <<EOT
-      # Configure kubectl to connect to the EKS cluster
-      aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}
-
-      # Fetch MongoDB credentials from AWS Secrets Manager
-      MONGO_USERNAME=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.mongodb_app_secret.id} --query SecretString --output text | jq -r .username)
-      MONGO_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.mongodb_app_secret.id} --query SecretString --output text | jq -r .password)
-
-      # Create Kubernetes secret
-      kubectl create secret generic mongo-secret --from-literal=username=$MONGO_USERNAME --from-literal=password=$MONGO_PASSWORD --namespace default
-    EOT
-
-    environment = {
-      AWS_REGION = var.aws_region
-    }
-  }
+# Fetch authentication token for the Kubernetes provider
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks.cluster_id
 }
+
+# Correct Kubernetes provider configuration
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate  = base64decode(module.eks.cluster_certificate_authority_data)
+  token                   = data.aws_eks_cluster_auth.cluster.token
+}
+
+resource "kubernetes_config_map" "aws_auth" {
+  metadata {
+    name      = "aws-auth"
+    namespace = "kube-system"
+  }
+
+  data = {
+    mapRoles = <<YAML
+    # Map the worker nodes' IAM role (already configured by EKS)
+     - rolearn: ${aws_iam_role.eks_cluster_role.arn}
+       username: system:node:{{EC2PrivateDNSName}}
+       groups:
+         - system:bootstrappers
+         - system:nodes
+
+    # Add GithubOIDCRole to system:masters group (admin permissions)
+     - rolearn: arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GithubOIDCRole
+       username: gh-admin
+       groups:
+         - system:masters
+    YAML
+
+  mapUsers = <<YAML
+    # Add root account as a Kubernetes admin
+     - userarn: arn:aws:iam::209479268294:root
+       username: root-admin
+       groups:
+         - system:masters
+
+    # Add IAM user terraleaner as a Kubernetes admin
+     - userarn: arn:aws:iam::209479268294:user/terraleaner
+       username: terraleaner-admin
+       groups:
+         - system:masters
+     - rolearn: ${aws_iam_role.eks_cluster_role.arn}
+       username: system:node:{{EC2PrivateDNSName}}
+  YAML
+  }
+
+  depends_on = [module.eks]
+}
+

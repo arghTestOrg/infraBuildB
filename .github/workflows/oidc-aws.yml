@@ -87,5 +87,7 @@ jobs:
     # Setting secrets for App deploy
     - name: Set GitHub Organization Secrets
       run: |
-        gh secret set CLUSTER_NAME --body "${{ env.CLUSTER_NAME }}" --org arghTestOrg
-        gh secret set CLUSTER_ENDPOINT --body "${{ env.CLUSTER_ENDPOINT }}" --org arghTestOrg
+        echo "${{ env.CLUSTER_NAME }}"
+        echo "${{ env.CLUSTER_ENDPOINT }}" 
+        gh secret set CLUSTER_NAME --body "${{ env.CLUSTER_NAME }}" --org arghTestOrg --visibility all
+        gh secret set CLUSTER_ENDPOINT --body "${{ env.CLUSTER_ENDPOINT }}" --org arghTestOrg --visibility all
