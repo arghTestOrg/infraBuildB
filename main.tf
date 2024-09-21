@@ -584,14 +584,13 @@ resource "aws_eks_access_policy_association" "terraadmin_policy" {
     type       = "cluster"
   }
 }
-resource "aws_iam_role" "teraleanerrole" {
+resource "aws_iam_role" "terraleanerrole" {
   name = "terraleanerroleassume"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
       {
-        "SiD": ""
         Effect = "Allow",
         Principal = {
                     "AWS" = "arn:aws:iam::209479268294:user/terraleaner"
