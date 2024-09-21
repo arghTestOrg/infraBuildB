@@ -510,7 +510,7 @@ resource "null_resource" "update_aws_auth_configmap" {
       kubectl apply -f aws-auth.yaml
     EOT
   } 
-}*/
+}
 
 resource "aws_eks_access_entry" "ghadmin_access" {
   cluster_name      = module.eks.cluster_name
@@ -546,7 +546,7 @@ resource "aws_eks_access_policy_association" "rootadmin_policy" {
   access_scope {
     type       = "cluster"
   }
-}
+}*/
 
 resource "aws_eks_access_entry" "terraadmin_access" {
   cluster_name      = module.eks.cluster_name
