@@ -442,7 +442,8 @@ module "eks" {
     aws_route_table.private_rt,
     aws_route_table.public_rt,
     aws_iam_role.eks_cluster_role,
-    aws_iam_policy.eks_cluster_policy_attachment
+    aws_iam_role_policy_attachment.eks_cluster_policy_attachment,
+    aws_iam_role_policy_attachment.eks_service_role_policy_attachment
   ]
 
   tags = {
