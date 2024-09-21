@@ -499,13 +499,11 @@ resource "null_resource" "update_aws_auth_configmap" {
       kubectl get configmap -n kube-system aws-auth -o yaml > aws-auth.yaml
 
       # Append the GithubOIDCRole mapping to the aws-auth.yaml file
-      echo "
-        mapRoles: |
-          - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
-            username: github-admin
-            groups:
-              - system:masters
-      " >> aws-auth.yaml
+      echo "mapRoles: |
+              - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
+                username: github-admin
+                groups:
+                  - system: masters" >> aws-auth.yaml
 
       # Apply the updated aws-auth ConfigMap back to the cluster
       kubectl apply -f aws-auth.yaml
