@@ -515,7 +515,7 @@ resource "null_resource" "update_aws_auth_configmap" {
 resource "aws_eks_access_entry" "ghadmin_access" {
   cluster_name      = module.eks.cluster_name
   principal_arn     = "arn:aws:iam::209479268294:role/GithubOIDCRole"
-  kubernetes_groups = ["system:masters", "system:bootstrappers"]
+  #kubernetes_groups = ["system:masters", "system:bootstrappers"]
   type              = "STANDARD"
   user_name         = "gh-admin"
 }
@@ -532,8 +532,8 @@ resource "aws_eks_access_policy_association" "ghadmin_policy" {
 
 resource "aws_eks_access_entry" "rootadmin_access" {
   cluster_name      = module.eks.cluster_name
-  principal_arn     = "arn:aws:iam::209479268294:role:root"
-  kubernetes_groups = ["system:masters", "system:bootstrappers"]
+  principal_arn     = "arn:aws:iam::209479268294:root"
+  #kubernetes_groups = ["system:masters", "system:bootstrappers"]
   type              = "STANDARD"
   user_name         = "root-admin"
 }
@@ -541,7 +541,7 @@ resource "aws_eks_access_entry" "rootadmin_access" {
 resource "aws_eks_access_policy_association" "rootadmin_policy" {
   cluster_name  = module.eks.cluster_name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = "arn:aws:iam::209479268294:role:root"
+  principal_arn = "arn:aws:iam::209479268294:root"
 
   access_scope {
     type       = "cluster"
@@ -551,10 +551,10 @@ resource "aws_eks_access_policy_association" "rootadmin_policy" {
 resource "aws_eks_access_entry" "terraadmin_access" {
   cluster_name      = module.eks.cluster_name
   principal_arn     = "arn:aws:iam::209479268294:role/terraleaner"
-  kubernetes_groups = ["system:masters", "system:bootstrappers"]
+  #kubernetes_groups = ["system:masters", "system:bootstrappers"]
   type              = "STANDARD"
   user_name         = "terra-admin"
-}
+}                     
 
 resource "aws_eks_access_policy_association" "terraadmin_policy" {
   cluster_name  = module.eks.cluster_name
