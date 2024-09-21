@@ -472,7 +472,7 @@ resource "aws_iam_role_policy_attachment" "eks_service_role_policy_attachment" {
   role       = aws_iam_role.eks_cluster_role.name
 }
 
-# Fetch AWS account information
+/*# Fetch AWS account information
 data "aws_caller_identity" "current" {}
 
 # Fetch the authentication token for EKS
@@ -499,7 +499,8 @@ resource "null_resource" "update_aws_auth_configmap" {
       kubectl get configmap -n kube-system aws-auth -o yaml > aws-auth.yaml
 
       # Append the GithubOIDCRole mapping to the aws-auth.yaml file
-      echo "mapRoles: |
+      echo "
+          mapRoles: |
               - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
                 username: github-admin
                 groups:
@@ -508,6 +509,59 @@ resource "null_resource" "update_aws_auth_configmap" {
       # Apply the updated aws-auth ConfigMap back to the cluster
       kubectl apply -f aws-auth.yaml
     EOT
-  }
+  } 
+}*/
 
+resource "aws_eks_access_entry" "ghadmin_access" {
+  cluster_name      = module.eks.cluster_name
+  principal_arn     = "arn:aws:iam::209479268294:role/GithubOIDCRole"
+  kubernetes_groups = ["system:masters", "system:bootstrappers"]
+  type              = "STANDARD"
+  user_name         = "gh-admin"
+}
+
+resource "aws_eks_access_policy_association" "ghadmin_policy" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = "arn:aws:iam::209479268294:role/GithubOIDCRole"
+
+  access_scope {
+    type       = "cluster"
+  }
+}
+
+resource "aws_eks_access_entry" "rootadmin_access" {
+  cluster_name      = module.eks.cluster_name
+  principal_arn     = "arn:aws:iam::209479268294:role:root"
+  kubernetes_groups = ["system:masters", "system:bootstrappers"]
+  type              = "STANDARD"
+  user_name         = "root-admin"
+}
+
+resource "aws_eks_access_policy_association" "rootadmin_policy" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = "arn:aws:iam::209479268294:role:root"
+
+  access_scope {
+    type       = "cluster"
+  }
+}
+
+resource "aws_eks_access_entry" "terraadmin_access" {
+  cluster_name      = module.eks.cluster_name
+  principal_arn     = "arn:aws:iam::209479268294:role/terraleaner"
+  kubernetes_groups = ["system:masters", "system:bootstrappers"]
+  type              = "STANDARD"
+  user_name         = "terra-admin"
+}
+
+resource "aws_eks_access_policy_association" "terraadmin_policy" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = "arn:aws:iam::209479268294:role/terraleaner"
+
+  access_scope {
+    type       = "cluster"
+  }
 }
