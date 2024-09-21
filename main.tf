@@ -510,7 +510,7 @@ resource "null_resource" "update_aws_auth_configmap" {
       kubectl apply -f aws-auth.yaml
     EOT
   } 
-}
+}*/
 
 resource "aws_eks_access_entry" "ghadmin_access" {
   cluster_name      = module.eks.cluster_name
@@ -530,6 +530,23 @@ resource "aws_eks_access_policy_association" "ghadmin_policy" {
   }
 }
 
+resource "aws_iam_role" "githuboidcrole" {
+  name = "githuboidcroleassume"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        "SiD": ""
+        Effect = "Allow",
+        Principal = {
+                    "AWS" = "arn:aws:iam::209479268294:role/GithubOIDCRole"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
 resource "aws_eks_access_entry" "rootadmin_access" {
   cluster_name      = module.eks.cluster_name
   principal_arn     = "arn:aws:iam::209479268294:root"
@@ -546,7 +563,7 @@ resource "aws_eks_access_policy_association" "rootadmin_policy" {
   access_scope {
     type       = "cluster"
   }
-}*/
+}
 
 resource "aws_eks_access_entry" "terraadmin_access" {
   cluster_name      = module.eks.cluster_name
@@ -564,4 +581,20 @@ resource "aws_eks_access_policy_association" "terraadmin_policy" {
   access_scope {
     type       = "cluster"
   }
+}
+resource "aws_iam_role" "teraleanerrole" {
+  name = "terraleanerroleassume"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        "SiD": ""
+        Effect = "Allow",
+        Principal = {
+                    "AWS" = "arn:aws:iam::209479268294:user/terraleaner"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
 }
