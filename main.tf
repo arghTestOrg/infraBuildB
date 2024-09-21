@@ -420,7 +420,7 @@ module "eks" {
   subnet_ids   = aws_subnet.private_subnets[*].id
   vpc_id       = aws_vpc.prod_vpc.id
   create_iam_role = false
-  iam_role_arn = aws_iam_role.eks_cluster_role
+  iam_role_arn = aws_iam_role.eks_cluster_role.arn
   iam_role_name = "tf_specified_eks_cluster_role"
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
