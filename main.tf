@@ -472,7 +472,10 @@ resource "aws_iam_role_policy_attachment" "eks_service_role_policy_attachment" {
   role       = aws_iam_role.eks_cluster_role.name
 }
 
-# Fetch authentication token for the Kubernetes provider
+# Fetch AWS account information
+data "aws_caller_identity" "current" {}
+
+# Fetch the authentication token for EKS
 data "aws_eks_cluster_auth" "cluster" {
   name = module.eks.cluster_id
 }
