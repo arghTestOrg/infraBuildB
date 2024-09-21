@@ -492,20 +492,22 @@ resource "null_resource" "update_aws_auth_configmap" {
 
   provisioner "local-exec" {
     command = <<EOT
+      # Configure kubectl to access the EKS cluster
       aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}
 
-      # Fetch the current aws-auth ConfigMap
+      # Fetch the current aws-auth ConfigMap and save to a file
       kubectl get configmap -n kube-system aws-auth -o yaml > aws-auth.yaml
 
-      # Add the GithubOIDCRole to the aws-auth ConfigMap
-      echo '
-      - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
-        username: github-admin
-        groups:
-          - system:masters
-      ' >> aws-auth.yaml
+      # Append the GithubOIDCRole mapping to the aws-auth.yaml file
+      echo "
+        mapRoles: |
+          - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
+            username: github-admin
+            groups:
+              - system:masters
+      " >> aws-auth.yaml
 
-      # Apply the updated aws-auth ConfigMap
+      # Apply the updated aws-auth ConfigMap back to the cluster
       kubectl apply -f aws-auth.yaml
     EOT
   }
