@@ -550,7 +550,7 @@ resource "aws_eks_access_policy_association" "rootadmin_policy" {
 
 resource "aws_eks_access_entry" "terraadmin_access" {
   cluster_name      = module.eks.cluster_name
-  principal_arn     = "arn:aws:iam::209479268294:role/terraleaner"
+  principal_arn     = "arn:aws:iam::209479268294:user/terraleaner"
   #kubernetes_groups = ["system:masters", "system:bootstrappers"]
   type              = "STANDARD"
   user_name         = "terra-admin"
@@ -559,7 +559,7 @@ resource "aws_eks_access_entry" "terraadmin_access" {
 resource "aws_eks_access_policy_association" "terraadmin_policy" {
   cluster_name  = module.eks.cluster_name
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = "arn:aws:iam::209479268294:role/terraleaner"
+  principal_arn = "arn:aws:iam::209479268294:user/terraleaner"
 
   access_scope {
     type       = "cluster"
