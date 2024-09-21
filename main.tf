@@ -483,49 +483,31 @@ data "aws_eks_cluster_auth" "cluster" {
 # Correct Kubernetes provider configuration
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate  = base64decode(module.eks.cluster_certificate_authority_data)
-  token                   = data.aws_eks_cluster_auth.cluster.token
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
-resource "kubernetes_config_map" "aws_auth" {
-  metadata {
-    name      = "aws-auth"
-    namespace = "kube-system"
-  }
-
-  data = {
-    mapRoles = <<YAML
-    # Map the worker nodes' IAM role (already configured by EKS)
-     - rolearn: ${aws_iam_role.eks_cluster_role.arn}
-       username: system:node:{{EC2PrivateDNSName}}
-       groups:
-         - system:bootstrappers
-         - system:nodes
-
-    # Add GithubOIDCRole to system:masters group (admin permissions)
-     - rolearn: arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GithubOIDCRole
-       username: gh-admin
-       groups:
-         - system:masters
-    YAML
-
-  mapUsers = <<YAML
-    # Add root account as a Kubernetes admin
-     - userarn: arn:aws:iam::209479268294:root
-       username: root-admin
-       groups:
-         - system:masters
-
-    # Add IAM user terraleaner as a Kubernetes admin
-     - userarn: arn:aws:iam::209479268294:user/terraleaner
-       username: terraleaner-admin
-       groups:
-         - system:masters
-     - rolearn: ${aws_iam_role.eks_cluster_role.arn}
-       username: system:node:{{EC2PrivateDNSName}}
-  YAML
-  }
-
+resource "null_resource" "update_aws_auth_configmap" {
   depends_on = [module.eks]
-}
 
+  provisioner "local-exec" {
+    command = <<EOT
+      aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}
+
+      # Fetch the current aws-auth ConfigMap
+      kubectl get configmap -n kube-system aws-auth -o yaml > aws-auth.yaml
+
+      # Add the GithubOIDCRole to the aws-auth ConfigMap
+      echo '
+      - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
+        username: github-admin
+        groups:
+          - system:masters
+      ' >> aws-auth.yaml
+
+      # Apply the updated aws-auth ConfigMap
+      kubectl apply -f aws-auth.yaml
+    EOT
+  }
+
+}
