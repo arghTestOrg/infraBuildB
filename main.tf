@@ -22,6 +22,7 @@ resource "aws_subnet" "public_subnets" {
 
   tags = {
     Name = "PublicSubnet_${count.index + 1}"
+    "kubernetes.io/role/elb" = "1"
   }
 }
 
@@ -418,7 +419,9 @@ module "eks" {
   cluster_name = var.aws_eks_cluster_name
   subnet_ids   = aws_subnet.private_subnets[*].id
   vpc_id       = aws_vpc.prod_vpc.id
-
+  create_iam_role = false
+  iam_role_arn = aws_iam_role.eks_cluster_role
+  iam_role_name = "tf_specified_eks_cluster_role"
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
   cluster_endpoint_private_access          = true
@@ -436,7 +439,10 @@ module "eks" {
   depends_on = [
     aws_eip.nat_eip,
     aws_nat_gateway.nat_gw,
-    aws_route_table.private_rt
+    aws_route_table.private_rt,
+    aws_route_table.public_rt,
+    aws_iam_role.eks_cluster_role,
+    aws_iam_policy.eks_cluster_policy_attachment
   ]
 
   tags = {
