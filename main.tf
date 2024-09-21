@@ -512,6 +512,7 @@ resource "null_resource" "update_aws_auth_configmap" {
   } 
 }*/
 
+/* No need for this as its already created
 resource "aws_eks_access_entry" "ghadmin_access" {
   cluster_name      = module.eks.cluster_name
   principal_arn     = "arn:aws:iam::209479268294:role/GithubOIDCRole"
@@ -529,6 +530,7 @@ resource "aws_eks_access_policy_association" "ghadmin_policy" {
     type       = "cluster"
   }
 }
+*/
 
 resource "aws_iam_role" "githuboidcrole" {
   name = "githuboidcroleassume"
@@ -537,10 +539,10 @@ resource "aws_iam_role" "githuboidcrole" {
     Version = "2012-10-17",
     Statement = [
       {
-        "SiD": ""
         Effect = "Allow",
         Principal = {
-                    "AWS" = "arn:aws:iam::209479268294:role/GithubOIDCRole"
+                    "AWS" = "arn:aws:iam::209479268294:role/GithubOIDCRole",
+                    "AWS" = "arn:aws:sts::209479268294:assumed-role/GithubOIDCRole/GitHubActions"
       },
       Action = "sts:AssumeRole"
     }]
