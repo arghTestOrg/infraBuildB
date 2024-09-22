@@ -20,11 +20,13 @@ resource "aws_subnet" "public_subnets" {
   count                   = length(data.aws_availability_zones.available.names)
   vpc_id                  = aws_vpc.prod_vpc.id
   cidr_block              = "10.1.${1 + count.index}.0/24"
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 
   tags = {
     Name                     = "PublicSubnet_${count.index + 1}"
     "kubernetes.io/role/elb" = "1"
+    "KubernetesCluster"      = "prod_eks"
   }
 }
 
@@ -32,11 +34,12 @@ resource "aws_subnet" "private_subnets" {
   count      = length(data.aws_availability_zones.available.names)
   vpc_id     = aws_vpc.prod_vpc.id
   cidr_block = "10.1.${10 + count.index}.0/24"
-  #availability_zone       = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
   #private_dns_hostname_type_on_launch = aws_instance.ip-name
   tags = {
     Name = "PrivateSubnet_${10 + count.index}"
+    "kubernetes.io/cluster/prod_eks"  = "shared"
   }
 }
 

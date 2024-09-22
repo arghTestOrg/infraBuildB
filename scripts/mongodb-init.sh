@@ -60,8 +60,7 @@ db.createUser({
   user: "$APP_USERNAME",
   pwd: "$APP_PASSWORD",
   roles: [
-    { role: "readWriteAnyDatabase", db: "admin" },
-    { role: "dbAdminAnyDatabase", db: "admin" }
+    { role: "readWrite", db: "customers" }
   ]
 })
 exit
