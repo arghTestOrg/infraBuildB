@@ -387,6 +387,8 @@ resource "aws_nat_gateway" "nat_gw" {
 
 }
 
+/* to use this code for eip and nat gw if it doesn't work */
+
 resource "aws_eip" "nat_eip" {
   domain = "vpc"
 }
