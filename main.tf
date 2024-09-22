@@ -479,66 +479,6 @@ resource "aws_iam_role_policy_attachment" "eks_service_role_policy_attachment" {
   role       = aws_iam_role.eks_cluster_role.name
 }
 
-/*# Fetch AWS account information
-data "aws_caller_identity" "current" {}
-
-# Fetch the authentication token for EKS
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
-}
-
-# Correct Kubernetes provider configuration
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
-
-resource "null_resource" "update_aws_auth_configmap" {
-  depends_on = [module.eks]
-
-  provisioner "local-exec" {
-    command = <<EOT
-      # Configure kubectl to access the EKS cluster
-      aws eks --region ${var.aws_region} update-kubeconfig --name ${module.eks.cluster_name}
-
-      # Fetch the current aws-auth ConfigMap and save to a file
-      kubectl get configmap -n kube-system aws-auth -o yaml > aws-auth.yaml
-
-      # Append the GithubOIDCRole mapping to the aws-auth.yaml file
-      echo "
-          mapRoles: |
-              - rolearn: arn:aws:iam::209479268294:role/GithubOIDCRole
-                username: github-admin
-                groups:
-                  - system: masters" >> aws-auth.yaml
-
-      # Apply the updated aws-auth ConfigMap back to the cluster
-      kubectl apply -f aws-auth.yaml
-    EOT
-  } 
-}*/
-
-/* No need for this as its already created
-resource "aws_eks_access_entry" "ghadmin_access" {
-  cluster_name      = module.eks.cluster_name
-  principal_arn     = "arn:aws:iam::209479268294:role/GithubOIDCRole"
-  #kubernetes_groups = ["system:masters", "system:bootstrappers"]
-  type              = "STANDARD"
-  user_name         = "gh-admin"
-}
-
-resource "aws_eks_access_policy_association" "ghadmin_policy" {
-  cluster_name  = module.eks.cluster_name
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  principal_arn = "arn:aws:iam::209479268294:role/GithubOIDCRole"
-
-  access_scope {
-    type       = "cluster"
-  }
-}
-*/
-
 resource "aws_iam_role" "githuboidcrole" {
   name = "githuboidcroleassume"
 
@@ -605,4 +545,38 @@ resource "aws_iam_role" "terraleanerrole" {
       Action = "sts:AssumeRole"
     }]
   })
+}
+
+# Following section is for providing cluster-admin privilege to pods
+data "aws_iam_policy_document" "podisadmin_assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["pods.eks.amazonaws.com"]
+    }
+
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
+  }
+}
+
+resource "aws_iam_role" "podisadmin" {
+  name               = "pod-is-eks-admin"
+  assume_role_policy = data.aws_iam_policy_document.podisadmin_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "podisadmin-policy-attach" {
+  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  role       = aws_iam_role.podisadmin.name
+}
+
+resource "aws_eks_pod_identity_association" "podisadmin-id-assoc" {
+  cluster_name    = module.eks.cluster_name  
+  namespace       = "default"
+  service_account = "techxeksadmin"
+  role_arn        = aws_iam_role.podisadmin.arn
 }
