@@ -434,6 +434,9 @@ module "eks" {
       instance_type    = var.aws_eks_node_instance_type
     }
   }
+  cluster_addons = { 
+      eks-pod-identity-agent = {}
+  }
 
   #Need this dependency as the nodes need connectivity
   depends_on = [
@@ -548,6 +551,8 @@ resource "aws_iam_role" "terraleanerrole" {
 }
 
 # Following section is for providing cluster-admin privilege to pods
+
+# This is for authorization assuming role
 data "aws_iam_policy_document" "podisadmin_assume_role" {
   statement {
     effect = "Allow"
@@ -564,19 +569,43 @@ data "aws_iam_policy_document" "podisadmin_assume_role" {
   }
 }
 
+# This is to give podmin permission to assume the role
 resource "aws_iam_role" "podisadmin" {
   name               = "pod-is-eks-admin"
   assume_role_policy = data.aws_iam_policy_document.podisadmin_assume_role.json
 }
 
-resource "aws_iam_role_policy_attachment" "podisadmin-policy-attach" {
-  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-  role       = aws_iam_role.podisadmin.name
+
+# EKS uses access entries
+resource "aws_eks_access_entry" "podisadmin_access" {
+  cluster_name      = module.eks.cluster_name
+  principal_arn     = aws_iam_role.podisadmin.arn
+  type              = "STANDARD"
+}                     
+
+# This the association of the IAM role with Cluster Admin Policy 
+resource "aws_eks_access_policy_association" "podisadmin_policy" {
+  cluster_name  = module.eks.cluster_name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_iam_role.podisadmin.arn
+
+  access_scope {
+    type       = "cluster"
+  }
 }
 
+# this is to associate the K8s service account with the IAM role
 resource "aws_eks_pod_identity_association" "podisadmin-id-assoc" {
   cluster_name    = module.eks.cluster_name  
   namespace       = "default"
   service_account = "techxeksadmin"
   role_arn        = aws_iam_role.podisadmin.arn
 }
+
+/* tried this first instead of creating access entry, but got error 400 validation error invalid arn
+resource "aws_iam_role_policy_attachment" "podisadmin-policy-attach" {
+  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  role       = aws_iam_role.podisadmin.name
+}
+
+*/
