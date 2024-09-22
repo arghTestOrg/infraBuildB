@@ -17,9 +17,10 @@ resource "aws_vpc" "prod_vpc" {
 }
 
 resource "aws_subnet" "public_subnets" {
-  count      = length(var.aws_public_subnet_cidrs)
-  vpc_id     = aws_vpc.prod_vpc.id
-  cidr_block = element(var.aws_public_subnet_cidrs, count.index)
+  count                   = length(data.aws_availability_zones.available.names)
+  vpc_id                  = aws_vpc.prod_vpc.id
+  cidr_block              = "10.1.${1 + count.index}.0/24"
+  map_public_ip_on_launch = true
 
   tags = {
     Name                     = "PublicSubnet_${count.index + 1}"
@@ -28,10 +29,10 @@ resource "aws_subnet" "public_subnets" {
 }
 
 resource "aws_subnet" "private_subnets" {
-  count                   = length(data.aws_availability_zones.available.names)
-  vpc_id                  = aws_vpc.prod_vpc.id
-  cidr_block              = "10.1.${10 + count.index}.0/24"
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  count      = length(data.aws_availability_zones.available.names)
+  vpc_id     = aws_vpc.prod_vpc.id
+  cidr_block = "10.1.${10 + count.index}.0/24"
+  #availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
   #private_dns_hostname_type_on_launch = aws_instance.ip-name
   tags = {
@@ -415,11 +416,11 @@ resource "null_resource" "create_mongo_k8s_secret" {
 # ***************************EKS CONFIG******************************
 # EKS cluster module setup
 module "eks" {
-  source                                   = "terraform-aws-modules/eks/aws"
-  version                                  = "20.24.1"
-  cluster_name                             = var.aws_eks_cluster_name
-  subnet_ids                               = aws_subnet.public_subnets[*].id
-  control_plane_subnet_ids                 = aws_subnet.private_subnets[*].id
+  source       = "terraform-aws-modules/eks/aws"
+  version      = "20.24.1"
+  cluster_name = var.aws_eks_cluster_name
+  subnet_ids   = aws_subnet.private_subnets[*].id
+  #control_plane_subnet_ids                 = aws_subnet.private_subnets[*].id
   vpc_id                                   = aws_vpc.prod_vpc.id
   create_iam_role                          = false
   iam_role_arn                             = aws_iam_role.eks_cluster_role.arn
@@ -434,7 +435,6 @@ module "eks" {
       max_capacity     = var.aws_eks_cluster_max_capacity
       min_capacity     = var.aws_eks_min_capacity
       instance_type    = var.aws_eks_node_instance_type
-      # placement_group_az = aws_subnet.public_subnets[0].availability_zone    
     }
   }
   cluster_addons = {
