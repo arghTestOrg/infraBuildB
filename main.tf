@@ -362,7 +362,7 @@ resource "aws_security_group" "eks_sg" {
   vpc_id = aws_vpc.prod_vpc.id
 
   egress {
-    from_port   = 0
+    from_port   = 0subnet_ids 
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
@@ -418,7 +418,7 @@ module "eks" {
   source       = "terraform-aws-modules/eks/aws"
   version      = "20.24.1"
   cluster_name = var.aws_eks_cluster_name
-  subnet_ids   = aws_subnet.private_subnets[*].id
+  control_plane_subnet_ids   = aws_subnet.private_subnets[*].id
   vpc_id       = aws_vpc.prod_vpc.id
   create_iam_role = false
   iam_role_arn = aws_iam_role.eks_cluster_role.arn
@@ -433,7 +433,9 @@ module "eks" {
       max_capacity     = var.aws_eks_cluster_max_capacity
       min_capacity     = var.aws_eks_min_capacity
       instance_type    = var.aws_eks_node_instance_type
-    }
+      # placement_group_az = aws_subnet.public_subnets[0].availability_zone    
+      subnet_ids =  aws_subnet.public_subnets[*].id
+      }
   }
   cluster_addons = { 
       eks-pod-identity-agent = {}
