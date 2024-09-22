@@ -8,7 +8,7 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 
 resource "aws_vpc" "prod_vpc" {
-  cidr_block = "10.1.0.0/16"
+  cidr_block           = "10.1.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
   tags = {
@@ -22,7 +22,7 @@ resource "aws_subnet" "public_subnets" {
   cidr_block = element(var.aws_public_subnet_cidrs, count.index)
 
   tags = {
-    Name = "PublicSubnet_${count.index + 1}"
+    Name                     = "PublicSubnet_${count.index + 1}"
     "kubernetes.io/role/elb" = "1"
   }
 }
@@ -415,14 +415,15 @@ resource "null_resource" "create_mongo_k8s_secret" {
 # ***************************EKS CONFIG******************************
 # EKS cluster module setup
 module "eks" {
-  source       = "terraform-aws-modules/eks/aws"
-  version      = "20.24.1"
-  cluster_name = var.aws_eks_cluster_name
-  control_plane_subnet_ids   = aws_subnet.private_subnets[*].id
-  vpc_id       = aws_vpc.prod_vpc.id
-  create_iam_role = false
-  iam_role_arn = aws_iam_role.eks_cluster_role.arn
-  iam_role_name = "tf_specified_eks_cluster_role"
+  source                                   = "terraform-aws-modules/eks/aws"
+  version                                  = "20.24.1"
+  cluster_name                             = var.aws_eks_cluster_name
+  subnet_ids                               = aws_subnet.public_subnets[*].id
+  control_plane_subnet_ids                 = aws_subnet.private_subnets[*].id
+  vpc_id                                   = aws_vpc.prod_vpc.id
+  create_iam_role                          = false
+  iam_role_arn                             = aws_iam_role.eks_cluster_role.arn
+  iam_role_name                            = "tf_specified_eks_cluster_role"
   enable_cluster_creator_admin_permissions = true
   cluster_endpoint_public_access           = true
   cluster_endpoint_private_access          = true
@@ -434,11 +435,10 @@ module "eks" {
       min_capacity     = var.aws_eks_min_capacity
       instance_type    = var.aws_eks_node_instance_type
       # placement_group_az = aws_subnet.public_subnets[0].availability_zone    
-      subnet_ids =  aws_subnet.public_subnets[*].id
-      }
+    }
   }
-  cluster_addons = { 
-      eks-pod-identity-agent = {}
+  cluster_addons = {
+    eks-pod-identity-agent = {}
   }
 
   #Need this dependency as the nodes need connectivity
@@ -494,20 +494,20 @@ resource "aws_iam_role" "githuboidcrole" {
       {
         Effect = "Allow",
         Principal = {
-                    "AWS" = "arn:aws:iam::209479268294:role/GithubOIDCRole",
-                    "AWS" = "arn:aws:sts::209479268294:assumed-role/GithubOIDCRole/GitHubActions"
-      },
-      Action = "sts:AssumeRole"
+          "AWS" = "arn:aws:iam::209479268294:role/GithubOIDCRole",
+          "AWS" = "arn:aws:sts::209479268294:assumed-role/GithubOIDCRole/GitHubActions"
+        },
+        Action = "sts:AssumeRole"
     }]
   })
 }
 
 resource "aws_eks_access_entry" "rootadmin_access" {
-  cluster_name      = module.eks.cluster_name
-  principal_arn     = "arn:aws:iam::209479268294:root"
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::209479268294:root"
   #kubernetes_groups = ["system:masters", "system:bootstrappers"]
-  type              = "STANDARD"
-  user_name         = "root-admin"
+  type      = "STANDARD"
+  user_name = "root-admin"
 }
 
 resource "aws_eks_access_policy_association" "rootadmin_policy" {
@@ -516,17 +516,17 @@ resource "aws_eks_access_policy_association" "rootadmin_policy" {
   principal_arn = "arn:aws:iam::209479268294:root"
 
   access_scope {
-    type       = "cluster"
+    type = "cluster"
   }
 }
 
 resource "aws_eks_access_entry" "terraadmin_access" {
-  cluster_name      = module.eks.cluster_name
-  principal_arn     = "arn:aws:iam::209479268294:user/terraleaner"
+  cluster_name  = module.eks.cluster_name
+  principal_arn = "arn:aws:iam::209479268294:user/terraleaner"
   #kubernetes_groups = ["system:masters", "system:bootstrappers"]
-  type              = "STANDARD"
-  user_name         = "terra-admin"
-}                     
+  type      = "STANDARD"
+  user_name = "terra-admin"
+}
 
 resource "aws_eks_access_policy_association" "terraadmin_policy" {
   cluster_name  = module.eks.cluster_name
@@ -534,7 +534,7 @@ resource "aws_eks_access_policy_association" "terraadmin_policy" {
   principal_arn = "arn:aws:iam::209479268294:user/terraleaner"
 
   access_scope {
-    type       = "cluster"
+    type = "cluster"
   }
 }
 resource "aws_iam_role" "terraleanerrole" {
@@ -546,9 +546,9 @@ resource "aws_iam_role" "terraleanerrole" {
       {
         Effect = "Allow",
         Principal = {
-                    "AWS" = "arn:aws:iam::209479268294:user/terraleaner"
-      },
-      Action = "sts:AssumeRole"
+          "AWS" = "arn:aws:iam::209479268294:user/terraleaner"
+        },
+        Action = "sts:AssumeRole"
     }]
   })
 }
@@ -581,10 +581,10 @@ resource "aws_iam_role" "podisadmin" {
 
 # EKS uses access entries
 resource "aws_eks_access_entry" "podisadmin_access" {
-  cluster_name      = module.eks.cluster_name
-  principal_arn     = aws_iam_role.podisadmin.arn
-  type              = "STANDARD"
-}                     
+  cluster_name  = module.eks.cluster_name
+  principal_arn = aws_iam_role.podisadmin.arn
+  type          = "STANDARD"
+}
 
 # This the association of the IAM role with Cluster Admin Policy 
 resource "aws_eks_access_policy_association" "podisadmin_policy" {
@@ -593,13 +593,13 @@ resource "aws_eks_access_policy_association" "podisadmin_policy" {
   principal_arn = aws_iam_role.podisadmin.arn
 
   access_scope {
-    type       = "cluster"
+    type = "cluster"
   }
 }
 
 # this is to associate the K8s service account with the IAM role
 resource "aws_eks_pod_identity_association" "podisadmin-id-assoc" {
-  cluster_name    = module.eks.cluster_name  
+  cluster_name    = module.eks.cluster_name
   namespace       = "default"
   service_account = "techxeksadmin"
   role_arn        = aws_iam_role.podisadmin.arn
