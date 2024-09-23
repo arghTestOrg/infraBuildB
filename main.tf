@@ -145,16 +145,16 @@ resource "aws_key_pair" "aws_keyname" {
 
 }
 
-variable "exclude_ec2_instance" {}
+# variable "exclude_ec2_instance" {}
 
 # EC2 Instance
 resource "aws_instance" "db_instance" {
   #for cases where we don;t want to deploy this instance in terraform apply
   # terraform apply -var='exclude_ec2_instance=true'
-  count         = var.exclude_ec2_instance ? 0 : 1
+  #count         = var.exclude_ec2_instance ? 0 : 1
+  #count         = length(var.aws_private_subnet_cidrs)
   ami           = var.aws_ec2_linux_ami_id
   instance_type = var.aws_ec2_instance_type
-  #count                       = length(var.aws_private_subnet_cidrs)
   subnet_id                   = aws_subnet.public_subnets[0].id # taken shortcut here by using index 0 as its just one instance
   vpc_security_group_ids      = [aws_security_group.db_sg.id]
   associate_public_ip_address = true
@@ -173,7 +173,8 @@ resource "aws_instance" "db_instance" {
     aws_secretsmanager_secret_version.mongodb_app_secret_version,
     aws_s3_bucket.dbbackup_bucket,
     aws_s3_bucket_policy.dbbackup_bucket_policy,
-  aws_s3_bucket_public_access_block.dbbackup_bucket_access_block]
+    aws_s3_bucket_public_access_block.dbbackup_bucket_access_block
+  ]
 
   user_data = file("scripts/mongodb-init.sh")
 
@@ -320,69 +321,7 @@ resource "aws_vpc_endpoint" "secretsmanager_endpoint" {
     Name = "secretsmanager-vpc-endpoint"
   }
 }
-/*----------Below is AWS Config piece-----
-# AWS Config
-resource "aws_config_configuration_recorder" "main" {
-  name     = "config"
-  role_arn = aws_iam_role.config_role.arn
 
-  recording_group {
-    all_supported = true
-    include_global_resource_types = true
-  }
-}
-
-resource "aws_iam_role" "config_role" {
-  name = "config_role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "config.amazonaws.com"
-      },
-      "Effect": "Allow",
-      "Sid": ""
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_policy_attachment" "config_role_attachment" {
-  name       = "config_role_attachment"
-  roles      = [aws_iam_role.config_role.name]
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSConfigRole"
-}
-*/
-
-
-/* # Security Group for EKS to communicate with MongoDB
-resource "aws_security_group" "eks_sg" {
-  name   = "eks_security_group"
-  vpc_id = aws_vpc.prod_vpc.id
-
-  egress {
-    from_port   = 0subnet_ids 
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port       = 27017
-    to_port         = 27017
-    protocol        = "tcp"
-    security_groups = [aws_security_group.db_sg.id]
-  }
-
-  tags = {
-    Name = "eks_security_group"
-  }
-} */
 
 resource "aws_nat_gateway" "nat_gw" {
   allocation_id = aws_eip.nat_eip.id
@@ -616,4 +555,43 @@ resource "aws_iam_role_policy_attachment" "podisadmin-policy-attach" {
   role       = aws_iam_role.podisadmin.name
 }
 
+*/
+
+/*----------Below is AWS Config piece but now just doing in console-----
+# AWS Config
+resource "aws_config_configuration_recorder" "main" {
+  name     = "config"
+  role_arn = aws_iam_role.config_role.arn
+
+  recording_group {
+    all_supported = true
+    include_global_resource_types = true
+  }
+}
+
+resource "aws_iam_role" "config_role" {
+  name = "config_role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "config.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy_attachment" "config_role_attachment" {
+  name       = "config_role_attachment"
+  roles      = [aws_iam_role.config_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSConfigRole"
+}
 */
