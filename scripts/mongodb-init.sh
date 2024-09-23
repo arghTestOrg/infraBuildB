@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Update and upgrade system packages
-#apt-get update -y
-#apt-get upgrade -y
-
 # Install packages
 sudo apt-get install jq gnupg curl -y
 sudo snap install aws-cli --classic
@@ -21,13 +17,13 @@ BACKUP_DATE=$(date +"%Y-%m-%d")
 echo $PRIVATE_IP
 
 # Modify MongoDB configuration to bind to the private IP
-#sudo sed -i "s/^bindIp: .*/bindIp: $PRIVATE_IP/" /etc/mongod.conf
 sudo sed -i "s/^\(\s*bindIp:\s*\).*/\1${PRIVATE_IP}/" /etc/mongod.conf
 
 # Restart cron service to ensure the cron job is registered
 sudo systemctl restart cron
 
 # Restart MongoDB service to apply the new configuration
+sudo systemctl daemon-reload
 sudo systemctl restart mongod
 sleep 60
 
@@ -45,7 +41,7 @@ APP_USERNAME=$(echo "$APP_CREDENTIALS" | jq -r '.username')
 APP_PASSWORD=$(echo "$APP_CREDENTIALS" | jq -r '.password')
 
 # Create MongoDB admin user using mongosh heredoc
-mongosh $PRIVATE_IP <<EOF
+mongosh $PRIVATE_IP/customers <<EOF
 db.createUser({
   user: "$ADMIN_USERNAME",
   pwd: "$ADMIN_PASSWORD",
@@ -66,11 +62,11 @@ db.createUser({
 exit
 EOF
 
-echo "MongoDB setup and configuration complete."
-
-  # Restart server with auth enabled
-  # edit the Mongodb file with security:
-  #                               authorization: enabled
-  # sudo systemctl start --noblock mongod
-  # Set correct permissions for /tmp
-  # - chmod 1777 /tmp
+# Restart server with auth enabled
+sudo tee -a /etc/mongod.conf > /dev/null <<EOT
+security:
+    authorization: enabled
+EOT
+sudo systemctl daemon-reload
+sudo systemctl start --noblock mongod
+echo "MongoDB setup and configuration complete--restarting."
