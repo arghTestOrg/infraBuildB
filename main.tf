@@ -79,7 +79,7 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public_rt_association" {
-  count          = length(aws_subnet.public_subnets[*].count)
+  count          = length(aws_subnet.public_subnets[*])
   subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
   route_table_id = aws_route_table.public_rt.id
 
@@ -152,7 +152,7 @@ resource "aws_instance" "db_instance" {
   #for cases where we don;t want to deploy this instance in terraform apply
   # terraform apply -var='exclude_ec2_instance=true'
   #count         = var.exclude_ec2_instance ? 0 : 1
-  count                       = length(aws_subnet.public_subnets[*].count)
+  count                       = length(aws_subnet.public_subnets[*])
   ami                         = var.aws_ec2_linux_ami_id
   instance_type               = var.aws_ec2_instance_type
   subnet_id                   = aws_subnet.public_subnets[0].id # taken shortcut here by using index 0 as its just one instance
