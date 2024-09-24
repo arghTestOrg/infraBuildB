@@ -13,19 +13,13 @@ variable "aws_vpc_cidr" {
   type        = string
 }
 
-variable "aws_public_subnet_cidrs" {
-  type        = list(string)
-  description = "Public Subnet CIDR values"
-  #default     = ["10.1.1.0/24"]
-}
-
 variable "aws_ec2_linux_ami_id" {
   description = "The AMI ID for the EC2 instance."
   type        = string
 }
 
 variable "aws_ec2_instance_type" {
-  description = "The instance type for the EC2 instance."
+  description = "The instance type for the 13.212.81.250EC2 instance."
   type        = string
 }
 
