@@ -28,9 +28,6 @@ jobs:
     - name: Terraform Init
       run: terraform init -lock=false
     
-    #- name: Terraform Plan Destroy
-    #  run: terraform plan -destroy -lock=false
-      
     - name: Terraform Destroy
-      run: terraform destroy -auto-approve -lock=false -var='exclude_ec2_instance=false'
+      run: terraform destroy -auto-approve -lock=false
       continue-on-error: true
