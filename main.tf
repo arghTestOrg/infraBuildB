@@ -17,10 +17,10 @@ resource "aws_vpc" "prod_vpc" {
 }
 
 resource "aws_subnet" "public_subnets" {
-  count                   = length(data.aws_availability_zones.available.names)
-  vpc_id                  = aws_vpc.prod_vpc.id
-  cidr_block              = "10.1.${1 + count.index}.0/24"
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  count             = length(data.aws_availability_zones.available.names)
+  vpc_id            = aws_vpc.prod_vpc.id
+  cidr_block        = "10.1.${1 + count.index}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
   # map_public_ip_on_launch = true
 
   tags = {
@@ -31,15 +31,15 @@ resource "aws_subnet" "public_subnets" {
 }
 
 resource "aws_subnet" "private_subnets" {
-  count      = length(data.aws_availability_zones.available.names)
-  vpc_id     = aws_vpc.prod_vpc.id
-  cidr_block = "10.1.${10 + count.index}.0/24"
+  count                   = length(data.aws_availability_zones.available.names)
+  vpc_id                  = aws_vpc.prod_vpc.id
+  cidr_block              = "10.1.${10 + count.index}.0/24"
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
   #private_dns_hostname_type_on_launch = aws_instance.ip-name
   tags = {
-    Name = "PrivateSubnet_${10 + count.index}"
-    "kubernetes.io/cluster/prod_eks"  = "shared"
+    Name                             = "PrivateSubnet_${10 + count.index}"
+    "kubernetes.io/cluster/prod_eks" = "shared"
   }
 }
 
@@ -79,7 +79,7 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public_rt_association" {
-  count          = length(var.aws_public_subnet_cidrs)
+  count          = length(aws_subnet.public_subnets[*].count)
   subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
   route_table_id = aws_route_table.public_rt.id
 
@@ -152,9 +152,9 @@ resource "aws_instance" "db_instance" {
   #for cases where we don;t want to deploy this instance in terraform apply
   # terraform apply -var='exclude_ec2_instance=true'
   #count         = var.exclude_ec2_instance ? 0 : 1
-  #count         = length(var.aws_private_subnet_cidrs)
-  ami           = var.aws_ec2_linux_ami_id
-  instance_type = var.aws_ec2_instance_type
+  count                       = length(aws_subnet.public_subnets[*].count)
+  ami                         = var.aws_ec2_linux_ami_id
+  instance_type               = var.aws_ec2_instance_type
   subnet_id                   = aws_subnet.public_subnets[0].id # taken shortcut here by using index 0 as its just one instance
   vpc_security_group_ids      = [aws_security_group.db_sg.id]
   associate_public_ip_address = true

@@ -10,7 +10,7 @@ resource "aws_secretsmanager_secret_version" "mongodb_admin_secret_version" {
   secret_id = aws_secretsmanager_secret.mongodb_admin_secret.id
   secret_string = jsonencode({
     username = "adminUser"
-    password = "W!zadry2024"   ###SECURITY ALERT###
+    password = "W!zadry2024" ###SECURITY ALERT###
   })
 }
 
@@ -26,7 +26,7 @@ resource "aws_secretsmanager_secret_version" "mongodb_app_secret_version" {
   secret_id = aws_secretsmanager_secret.mongodb_app_secret.id
   secret_string = jsonencode({
     username = "appUser"
-    password = "W!zadry2024"    ###SECURITY ALERT###
+    password = "W!zadry2024" ###SECURITY ALERT###
   })
 }
 
